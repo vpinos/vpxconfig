@@ -500,7 +500,7 @@ class SettingTests(unittest.TestCase):
 
     def test_every_shipped_setting_is_valid_and_unique(self):
         fields = self.fields()
-        self.assertEqual(len(fields), 162)
+        self.assertEqual(len(fields), 163)
         for f in fields.values():
             self.assertIn(f["type"], settings.TYPES)
 
@@ -628,7 +628,7 @@ class LoadedControllerTests(unittest.TestCase):
         return next(s for s in self.app.steps if s["id"] == "input")
 
     def test_a_fresh_start_has_no_device_specific_fields(self):
-        self.assertEqual(len(self.app.fields), 162)
+        self.assertEqual(len(self.app.fields), 163)
         self.assertEqual([g["title"] for g in self.input_step()["groups"]][-1], "Custom buttons")
 
     def test_loading_the_file_adds_its_lines_typed_from_vpxs_definitions(self):
@@ -680,9 +680,9 @@ class LoadedControllerTests(unittest.TestCase):
 
     def test_going_back_to_the_default_base_drops_the_extra_fields(self):
         self.app.set_base(str(self.ini))
-        self.assertGreater(len(self.app.fields), 162)
+        self.assertGreater(len(self.app.fields), 163)
         self.app.set_base("")
-        self.assertEqual(len(self.app.fields), 162)
+        self.assertEqual(len(self.app.fields), 163)
         self.assertFalse([k for k in self.app.state["values"] if self.JOY in k])
 
     def test_the_extra_fields_and_edits_survive_a_restart(self):
@@ -1557,7 +1557,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(steps[0]["panels"], ["base", "target"])
         self.assertEqual([f["id"] for g in steps[0]["groups"] for f in g["fields"]], [])          # Start: VPXConfig's own settings only
         self.assertEqual([f["id"] for g in steps[1]["groups"] for f in g["fields"]],
-                         ["Player.BGSet", "Player.MaxFramerate", "Player.MaxTexDimension"])
+                         ["Player.BGSet", "Player.SyncMode", "Player.MaxFramerate", "Player.MaxTexDimension"])
 
     def test_path_traversal_blocked(self):
         self.assertEqual(self.call("GET", "/../VPinballX.ini")[0], 404)

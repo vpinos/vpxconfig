@@ -43,7 +43,9 @@ STEPS = [
         "description": "Basics that apply to the whole installation.",
         "groups": [
             {"title": "View", "fields": [S("Player", "BGSet")]},
-            {"title": "Performance", "fields": [S("Player", "MaxFramerate"), S("Player", "MaxTexDimension")]},
+            {"title": "Performance", "fields": [
+                S("Player", "SyncMode", label="Synchronization Mode"),
+                S("Player", "MaxFramerate"), S("Player", "MaxTexDimension")]},
         ],
     },
     {
