@@ -301,10 +301,13 @@ function basePanel() {
         (app.base.backup ? ` A backup copy is at ${app.base.backup}.` : "")));
 }
 
-// ---- shutting the server down ---------------------------------------------------------------
+// ---- quitting ---------------------------------------------------------------------------------
 async function shutdown() {
-  if (!confirm("Stop VPXConfig?\n\nYour answers are saved. The ini file is only written when you click Write on the Review page.")) return;
+  if (!confirm("Quit VPXConfig?\n\nYour answers are saved. The ini file is only written when you click Write on the Review page.")) return;
   try { await flush(); await api.send("POST", "/api/shutdown"); } catch (e) { /* the server may already be closing the connection */ }
+  // When VPXConfig was started with --open-chrome, it closes this window itself once it sees the server
+  // stop -- this page is only what's briefly visible (or, run plainly with no browser spawned, what stays
+  // visible) in the meantime.
   document.body.replaceChildren(h("main", { class: "stopped" }, h("h1", {}, "VPXConfig has stopped"),
     h("p", { class: "muted" }, "You can close this tab. Start VPXConfig again to continue; your answers will still be there.")));
 }

@@ -23,7 +23,7 @@ tar -xzf vpxconfig-linux-x86_64.tar.gz
 ./vpxconfig --version
 ```
 
-`--host` and `--port` work as above. Stop it with Ctrl+C, or with the **Shut down** button at the bottom of the page's sidebar (it asks first; your answers are already saved as you type, but the ini file is only written when you click Write on the Review page). Next to the executable is a `.sha256` file to check the download. Because the executable unpacks itself into a temporary folder that is deleted when it exits, your answers are kept in `~/.config/vpxconfig/state.json` (or under `$XDG_CONFIG_HOME` if that is set) instead of next to the program. It is not signed.
+`--host` and `--port` work as above. Stop it with Ctrl+C, or with the **Quit** button at the bottom of the page's sidebar (it asks first; your answers are already saved as you type, but the ini file is only written when you click Write on the Review page). Add `--open-chrome` to have it open `google-chrome` on itself once it's up and close that window too when you quit (via the page's Quit button or Chrome's own close button) -- off by default, so a plain `./vpxconfig`/`./run.py` still just serves the page for you to open in any browser yourself. Next to the executable is a `.sha256` file to check the download. Because the executable unpacks itself into a temporary folder that is deleted when it exits, your answers are kept in `~/.config/vpxconfig/state.json` (or under `$XDG_CONFIG_HOME` if that is set) instead of next to the program. It is not signed.
 
 ## How it works
 

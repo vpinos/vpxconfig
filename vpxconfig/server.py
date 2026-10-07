@@ -3,6 +3,8 @@ import json
 import mimetypes
 import os
 import shutil
+import subprocess
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -322,13 +324,68 @@ def stop(httpd):
     threading.Thread(target=httpd.shutdown, daemon=True).start()
 
 
-def serve(host="127.0.0.1", port=1111):
+def run_with_chrome(httpd, host, port):
+    """Serve on a background thread, open google-chrome on it, and once either Chrome or the server stops, tear down
+    the other too -- so Quit in the page actually closes the browser window, not just the server underneath it.
+    Opt-in (see serve()'s open_chrome param): a plain `serve_forever()` with nothing watching for a browser is what
+    tools/smoke_test_exe.sh (headless CI, no display) and the README's "run it, then open the page yourself" workflow
+    both need to keep working, so this path is never taken unless something specifically asks for it (VPinOS's
+    vpinos-menu.sh does, via run.py's --open-chrome; that project's vpinos-config.py uses the same technique for its
+    own always-needs-a-window config tool)."""
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    # --app=URL (not --kiosk): a plain window with a title bar and close button, not a fullscreen one -- a config
+    # tool needs a visible, obvious way to close it. --start-maximized fills the screen without suppressing that.
+    chrome = subprocess.Popen([
+        "google-chrome",
+        f"--app=http://{host}:{port}",
+        "--start-maximized",
+        "--no-first-run",
+        "--disable-session-crashed-bubble",
+        "--noerrdialogs",
+    ])
+
+    try:
+        while chrome.poll() is None and server_thread.is_alive():
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+
+    if chrome.poll() is None:
+        # The server stopped first (the page's own Quit button) -- close the browser window too, instead of
+        # leaving an orphaned "stopped" tab open.
+        chrome.terminate()
+        try:
+            chrome.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            chrome.kill()
+
+    if server_thread.is_alive():
+        # Chrome exited first (closed via its own window controls) -- stop the server the same way
+        # POST /api/shutdown does.
+        stop(httpd)
+        server_thread.join(timeout=5)
+
+
+def serve(host="127.0.0.1", port=1111, open_chrome=False):
     app = App()
     httpd = create_server(app, host, port)
     print(f"VPXConfig {__version__}: http://localhost:{port}   (base: {app.template_path.name}, writes to: {app.output_path}, "
           f"answers kept in: {app.state_path})")
     if host not in ("127.0.0.1", "localhost", "::1"):
         print("WARNING: listening on a non-loopback address; anyone on the network can browse this machine's folders and change the output file.")
+
+    if open_chrome:
+        try:
+            run_with_chrome(httpd, host, httpd.server_port)
+        except FileNotFoundError:
+            print("ERROR: --open-chrome was given but 'google-chrome' isn't on PATH.", file=sys.stderr)
+        finally:
+            httpd.server_close()
+            print("VPXConfig stopped.")
+        return
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

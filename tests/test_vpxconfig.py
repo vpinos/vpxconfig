@@ -1117,7 +1117,7 @@ class ReleaseTests(unittest.TestCase):
 
 
 class ShutdownTests(unittest.TestCase):
-    """The web page's "Shut down" button: POST /api/shutdown stops the server."""
+    """The web page's "Quit" button: POST /api/shutdown stops the server."""
 
     def setUp(self):
         self.dir = Path(tempfile.mkdtemp())
@@ -1184,7 +1184,7 @@ class ShutdownTests(unittest.TestCase):
         self.assertIn('id="shutdown"', (web / "index.html").read_text())
         js = (web / "app.js").read_text()
         self.assertIn('"/api/shutdown"', js)
-        self.assertLess(js.index("confirm(\"Stop VPXConfig?"), js.index('"/api/shutdown"'))      # the question comes before the request
+        self.assertLess(js.index("confirm(\"Quit VPXConfig?"), js.index('"/api/shutdown"'))      # the question comes before the request
         self.assertIn("VPXConfig has stopped", js)
 
 
