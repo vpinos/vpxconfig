@@ -20,14 +20,33 @@ from .steps import all_fields, build_steps
 
 WEB = paths.resource_dir() / "web"
 TEMPLATE = paths.resource_dir() / "VPinballX.ini"       # wizard definition and default base, never modified
-# Where VPX keeps its settings on Linux (VPX 10.8+ uses a folder per minor version). The wizard writes here unless told otherwise.
-DEFAULT_OUTPUT_PARTS = (".local", "share", "VPinballX", "10.8", "VPinballX.ini")
+# Where VPX keeps its settings on Linux: $XDG_DATA_HOME (default ~/.local/share)/VPinballX/<major.minor>/VPinballX.ini,
+# one folder per minor version (10.8, 10.9, ...). The wizard writes here unless told otherwise.
+SETTINGS_FILE = "VPinballX.ini"
+# Only used when no version folder exists yet: the folder the current VPX creates the first time it runs.
+NEWEST_VERSION = "10.9"
 STATE = paths.state_path()             # wizard answers, so a restart keeps them
 API_HEADER = "X-VPX-Config"             # required on writes: forces a CORS preflight from other sites
 
 
+def _version_key(name):
+    major, _, minor = name.partition(".")
+    return (int(major), int(minor)) if major.isdigit() and minor.isdigit() else None
+
+
 def default_output():
-    return Path.home().joinpath(*DEFAULT_OUTPUT_PARTS)
+    """The newest existing version folder, or NEWEST_VERSION when VPX has never run.
+
+    Never pick a newer version than the folders that exist: the first time a new VPX minor version runs, it copies
+    the newest older folder into a new one, but only if that new folder doesn't exist yet. Writing into the old
+    folder is fine, because that copy carries the change over."""
+    base = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "VPinballX"
+    try:
+        folders = [p.name for p in base.iterdir() if p.is_dir() and _version_key(p.name)]
+    except OSError:
+        folders = []
+    version = max(folders, key=_version_key) if folders else NEWEST_VERSION
+    return base / version / SETTINGS_FILE
 
 
 MAX_BASE_BYTES = 10_000_000

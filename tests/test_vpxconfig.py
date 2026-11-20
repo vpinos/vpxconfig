@@ -763,9 +763,12 @@ class OutputFileTests(unittest.TestCase):
         old_home = os.environ.get("HOME")
         os.environ["HOME"] = str(self.home)                      # never touch the real ~/.local/share
         self.addCleanup(lambda: os.environ.__setitem__("HOME", old_home) if old_home is not None else os.environ.pop("HOME", None))
+        old_xdg = os.environ.pop("XDG_DATA_HOME", None)          # the default location must come from HOME here
+        self.addCleanup(lambda: os.environ.__setitem__("XDG_DATA_HOME", old_xdg) if old_xdg is not None else None)
         self.state = self.dir / "state.json"
         self.app = server.App(TEMPLATE, None, self.state)         # no explicit output: the default location
-        self.default = self.home / ".local" / "share" / "VPinballX" / "10.8" / "VPinballX.ini"
+        self.vpx = self.home / ".local" / "share" / "VPinballX"
+        self.default = self.vpx / server.NEWEST_VERSION / "VPinballX.ini"
 
     def change_something(self):
         self.app.update_state({"values": {"Player.BGSet": "1"}})
@@ -775,6 +778,22 @@ class OutputFileTests(unittest.TestCase):
         out = self.app.public_state()["output"]
         self.assertEqual((out["path"], out["name"], out["is_default"], out["exists"], out["folder_exists"]),
                          (str(self.default), "VPinballX.ini", True, False, False))
+
+    def test_the_default_is_the_newest_version_folder_that_exists(self):
+        for name in ("10.8", "10.10", "10.9", "notaversion", "11"):
+            (self.vpx / name).mkdir(parents=True)
+        self.assertEqual(server.default_output(), self.vpx / "10.10" / "VPinballX.ini")
+
+    def test_an_older_version_folder_is_used_rather_than_creating_a_newer_one(self):
+        # VPX only copies 10.8's settings into 10.9 if 10.9 doesn't exist yet, so the wizard must not create it.
+        (self.vpx / "10.8").mkdir(parents=True)
+        self.assertEqual(server.default_output(), self.vpx / "10.8" / "VPinballX.ini")
+        self.assertFalse((self.vpx / "10.9").exists())
+
+    def test_xdg_data_home_moves_the_default(self):
+        os.environ["XDG_DATA_HOME"] = str(self.dir / "xdg")
+        self.addCleanup(os.environ.pop, "XDG_DATA_HOME", None)
+        self.assertEqual(server.default_output(), self.dir / "xdg" / "VPinballX" / server.NEWEST_VERSION / "VPinballX.ini")
 
     def test_saving_to_the_default_creates_the_folders_and_the_file(self):
         self.change_something()
@@ -885,7 +904,7 @@ class OutputFileTests(unittest.TestCase):
         self.assertEqual(IniDocument.from_file(mine).get("Player", "BGSet"), "1")
 
     def test_folder_listing_can_start_in_a_folder_that_does_not_exist_yet(self):
-        missing = self.home / ".local" / "share" / "VPinballX" / "10.8"
+        missing = self.vpx / server.NEWEST_VERSION
         with self.assertRaises(ValueError):
             fs.list_dir(str(missing))
         self.assertEqual(fs.list_dir(str(missing), nearest=True)["path"], str(self.home))
